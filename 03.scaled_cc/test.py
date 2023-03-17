@@ -27,6 +27,10 @@ mtz_df1 = mtz_df.astype({label: 'int32' for label in 'HKL'})
 cell1 = mtz.cell
 print(cell1.a,cell1.b,cell1.c)
 
+# 線形関数の定義
+def linear_func(x, a, b):
+    return a * x + b
+
 def abc_stars(cells):
     a=cells.a
     b=cells.b
@@ -75,9 +79,12 @@ def make_scaled_intensity(df, cells, scale, B):
     plt.show()
     df['IMEAN_scaled'] = np.power(10.0,scaled_log_imean1)
 
+    print("OKAOKAY")
     plt.scatter(df['dstar2'],scaled_log_imean1)
     plt.scatter(df['dstar2'],logscaled_imean1)
     plt.show()
+
+    return df
 
 def calc_drelated(df,cells):
     # calculation of a*, b*, c* from unit cell parameters
@@ -89,6 +96,9 @@ def calc_drelated(df,cells):
     return df
 
 def scale_intensity(df,cells):
+    print("#########################################<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+    print(df)
+    print("#########################################<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
     # calculation of a*, b*, c* from unit cell parameters
     astar,bstar,cstar=abc_stars(cells)
     # dstar vector 
@@ -99,12 +109,12 @@ def scale_intensity(df,cells):
 
     # Filtering I > 0.0
     filter_i1 = df['IMEAN'] > 0.0
-    filter_i2 = df['IMEAN2'] > 0.0
+    filter_i2 = df['IMEAN_scaled'] > 0.0
     df_ = df[filter_i1 & filter_i2]
 
     # Log of intensity
     df_['logIMEAN1'] = np.log10(df_['IMEAN'])
-    df_['logIMEAN2'] = np.log10(df_['IMEAN2'])
+    df_['logIMEAN2'] = np.log10(df_['IMEAN_scaled'])
     # Linear regression
     regressor = LinearRegression()
     regressor.fit(df_[['logIMEAN1']],df_['logIMEAN2'])
@@ -114,9 +124,9 @@ def scale_intensity(df,cells):
     df_['IMEAN1_'] = np.power(10,df_['logIMEAN1_'])
 
     # Log R-factor-like index
-    diff_array = np.power(df_['IMEAN1'] - df_['IMEAN2'],2.0)
+    diff_array = np.power(df_['IMEAN1'] - df_['IMEAN_scaled'],2.0)
     sum1=np.sum(diff_array)
-    diff_array = np.power(df_['IMEAN1_'] - df_['IMEAN2'],2.0)
+    diff_array = np.power(df_['IMEAN1_'] - df_['IMEAN_scaled'],2.0)
     sum2=np.sum(diff_array)
 
     print("TOTAL",sum1/1e6,sum2/1e6)
@@ -125,21 +135,14 @@ def scale_intensity(df,cells):
     plt_flag=df_.index%2000==0
     df_plt=df_[plt_flag]
 
-    print("#############################################################################")
-    #plt.scatter(df_['dstar2'],df_['IMEAN'],s=0.1,alpha=0.5)
-    #plt.scatter(df_['dstar2'],df_['IMEAN1_'],s=0.1,alpha=0.5)
-    #plt.scatter(df_['dstar2'],df_['logIMEAN1'],s=0.1,alpha=0.5)
-    #plt.scatter(df_['dstar2'],df_['logIMEAN2'],s=0.1,alpha=0.5)
-    #plt.scatter(df_['dstar2'],df_['logIMEAN1_'],s=0.1,alpha=0.5)
-
     plt.scatter(df_plt['dstar2'],df_plt['logIMEAN1'],s=5,alpha=1,label="logIMEAN1",marker='o')
     plt.scatter(df_plt['dstar2'],df_plt['logIMEAN2'],s=5,alpha=1,label="logIMEAN2",marker='x')
     plt.scatter(df_plt['dstar2'],df_plt['logIMEAN1_'],s=5,alpha=1,label="logIMEAN1_dash",marker='^')
     plt.legend()
     plt.show()
     
-make_scaled_intensity(df,cell1,10.0,10)
-#scale_intensity(df,cell1)
+df = make_scaled_intensity(df,cell1,10.0,10)
+scale_intensity(df,cell1)
 
 # Correlation coefficient of 
 cc=df['IMEAN'].corr(df['IMEAN2'])
